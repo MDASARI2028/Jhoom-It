@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 
-// Helper to get cookie
+
 function getCookie(name: string) {
     if (typeof document === 'undefined') return null;
     const value = `; ${document.cookie}`;
@@ -28,9 +28,9 @@ import CardVisualizer from "./CardVisualizer";
 export default function CurrentTrackDisplay() {
     const [track, setTrack] = useState<TrackInfo | null>(null);
     const [error, setError] = useState<string>("");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const [localProgress, setLocalProgress] = useState(0);
-    // State for debugging
+
     const [debugInfo, setDebugInfo] = useState({ token: "Checking...", status: "Init", lastUpdate: "-" });
 
     useEffect(() => {
@@ -48,7 +48,7 @@ export default function CurrentTrackDisplay() {
             }
 
             try {
-                // Add timestamp to prevent caching
+
                 const response = await fetch(`https://api.spotify.com/v1/me/player/currently-playing?timestamp=${Date.now()}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -59,7 +59,7 @@ export default function CurrentTrackDisplay() {
 
                 if (response.status === 204) {
                     setError("Spotify Open, But Not Playing.");
-                    // Don't clear track immediately to avoid flickering, but maybe mark as paused
+
                     setTrack(prev => prev ? { ...prev, isPlaying: false } : null);
                     return;
                 }
@@ -76,7 +76,7 @@ export default function CurrentTrackDisplay() {
 
                 const data = await response.json();
                 if (data && data.item) {
-                    // Check if track actually changed to log it
+
                     setTrack(prev => {
                         const newArt = data.item.album.images[0]?.url || '';
                         return {
@@ -92,7 +92,7 @@ export default function CurrentTrackDisplay() {
                     setLocalProgress(data.progress_ms);
                     setError("");
                 } else {
-                    // Podcast or ad might be playing (typical if response is OK but item is null)
+
                     setError("Unknown Content (Ad/Podcast?)");
                 }
             } catch (e: any) {
@@ -101,13 +101,13 @@ export default function CurrentTrackDisplay() {
             }
         };
 
-        // Fetch immediately
+
         fetchCurrentTrack();
 
-        // Fetch updates every 2 seconds (faster polling)
+
         const fetchInterval = setInterval(fetchCurrentTrack, 2000);
 
-        // Listen for OPTIMISTIC updates from GestureController
+
         const handleOptimisticUpdate = (e: Event) => {
             const action = (e as CustomEvent).detail.action;
             console.log(`Optimistic Update: ${action}`);
@@ -121,7 +121,7 @@ export default function CurrentTrackDisplay() {
         };
         window.addEventListener('spotifyOptimisticAction', handleOptimisticUpdate);
 
-        // Local progress timer
+
         const progressInterval = setInterval(() => {
             setTrack((current) => {
                 if (!current || !current.isPlaying) return current;
@@ -148,13 +148,13 @@ export default function CurrentTrackDisplay() {
         duration: 1
     };
 
-    // Use displayTrack as a fallback variable name if code references it
+
     const displayTrack = currentTrack;
 
     const progressPercent = currentTrack.duration > 0 ? (currentTrack.progress / currentTrack.duration) * 100 : 0;
     const isMissingToken = debugInfo.token.startsWith("MISSING");
 
-    // ALWAYS RENDER THE CARD. If no track, it shows the error state/fallback above.
+
     return (
         <AnimatePresence>
             <motion.div
@@ -163,13 +163,13 @@ export default function CurrentTrackDisplay() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="relative z-50 p-4 font-sans"
             >
-                {/* Main Card */}
+                {}
                 <div className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col md:flex-row gap-8 items-center max-w-4xl border-t border-l border-white/20 relative">
 
-                    {/* Visualizer Attached to Card */}
+                    {}
                     <CardVisualizer />
 
-                    {/* Album Art */}
+                    {}
                     <div className="relative flex-shrink-0 group">
                         <motion.div
                             className="w-56 h-56 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl border border-white/5"
@@ -184,16 +184,16 @@ export default function CurrentTrackDisplay() {
                         </motion.div>
                     </div>
 
-                    {/* Content Section */}
+                    {}
                     <div className="flex-1 min-w-[20rem] flex flex-col justify-center gap-6">
-                        {/* Text Info */}
+                        {}
                         <div className="space-y-1 text-center md:text-left">
                             <h3 className="text-white font-bold text-3xl md:text-4xl truncate leading-tight tracking-tight">{currentTrack.name}</h3>
                             <p className="text-green-400 text-lg md:text-xl font-medium truncate">{currentTrack.artist}</p>
                             <p className="text-white/40 text-sm uppercase tracking-widest font-mono">{currentTrack.album}</p>
                         </div>
 
-                        {/* LOGIN BUTTON FOR MISSING TOKEN */}
+                        {}
                         {isMissingToken && (
                             <div className="flex justify-center md:justify-start py-2">
                                 <a
@@ -205,7 +205,7 @@ export default function CurrentTrackDisplay() {
                             </div>
                         )}
 
-                        {/* Progress - Only show if valid token */}
+                        {}
                         {!isMissingToken && (
                             <div className="w-full space-y-2">
                                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -223,7 +223,7 @@ export default function CurrentTrackDisplay() {
                             </div>
                         )}
 
-                        {/* Controls - Only show if valid token */}
+                        {}
                         {!isMissingToken && (
                             <div className="flex items-center justify-center md:justify-start gap-6 pt-2">
                                 <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white hover:scale-110">
@@ -244,7 +244,7 @@ export default function CurrentTrackDisplay() {
                             </div>
                         )}
 
-                        {/* Debug Info (Only visible if issues) */}
+                        {}
                         <div className="text-[10px] font-mono text-white/30 text-center border-t border-white/5 pt-2 mt-2">
                             Token: {debugInfo.token} | Status: {debugInfo.status} | Last: {debugInfo.lastUpdate}
                         </div>

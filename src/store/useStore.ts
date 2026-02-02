@@ -24,26 +24,26 @@ interface HandUI {
 }
 
 interface StoreState {
-  // Tracking Data
+
   leftHand: HandLandmark[] | null;
   rightHand: HandLandmark[] | null;
 
-  // Recognized Gestures
+
   leftGesture: GestureType;
   rightGesture: GestureType;
 
-  // Hand UI Data
+
   handUiData: {
     left: HandUI;
     right: HandUI;
   };
 
-  // Notifications
+
   notifications: Array<{ id: string; message: string; type: "info" | "warning" | "success"; timestamp: number }>;
   addNotification: (message: string, type?: "info" | "warning" | "success") => void;
   removeNotification: (id: string) => void;
 
-  // Actions
+
   setHands: (left: HandLandmark[] | null, right: HandLandmark[] | null) => void;
   setGestures: (left: GestureType, right: GestureType) => void;
   updateHandUI: (hand: "left" | "right", data: Partial<HandUI>) => void;

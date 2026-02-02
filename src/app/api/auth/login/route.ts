@@ -5,7 +5,7 @@ export async function GET() {
     try {
         console.log('Login route called');
 
-        // Debug checks
+
         const clientId = process.env.SPOTIFY_CLIENT_ID;
         const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
 

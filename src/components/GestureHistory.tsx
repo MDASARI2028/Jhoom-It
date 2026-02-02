@@ -17,7 +17,7 @@ export default function GestureHistory() {
     const [isMinimized, setIsMinimized] = useState(false);
 
     useEffect(() => {
-        // Log when gestures change
+
         const addToHistory = (gesture: string, hand: "LEFT" | "RIGHT") => {
             if (gesture === "IDLE") return;
 
@@ -28,7 +28,7 @@ export default function GestureHistory() {
                 time: new Date().toLocaleTimeString()
             };
 
-            setHistory(prev => [entry, ...prev].slice(0, 10)); // Keep last 10
+            setHistory(prev => [entry, ...prev].slice(0, 10)); 
         };
 
         if (leftGesture !== "IDLE") {
@@ -41,7 +41,7 @@ export default function GestureHistory() {
 
     return (
         <div className="fixed top-24 right-6 z-50 w-72 bg-black/80 border border-purple-500/50 rounded-lg backdrop-blur-md">
-            {/* Header */}
+            {}
             <div
                 onClick={() => setIsMinimized(!isMinimized)}
                 className="flex items-center justify-between p-3 border-b border-purple-500/30 cursor-pointer hover:bg-purple-500/10 transition-colors"
@@ -53,7 +53,7 @@ export default function GestureHistory() {
                 <span className="text-purple-400 text-xs">{isMinimized ? '▼' : '▲'}</span>
             </div>
 
-            {/* Content */}
+            {}
             <AnimatePresence>
                 {!isMinimized && (
                     <motion.div

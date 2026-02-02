@@ -26,7 +26,7 @@ export default function NotificationSystem() {
                         <div className="flex justify-between items-center">
                             <span>{notif.message}</span>
                         </div>
-                        {/* Progress bar effect could go here */}
+                        {}
                     </motion.div>
                 ))}
             </AnimatePresence>

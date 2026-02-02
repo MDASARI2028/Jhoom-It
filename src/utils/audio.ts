@@ -1,5 +1,5 @@
-// Simple sci-fi sound synthesizer using Web Audio API
-// No external assets needed
+
+
 
 let audioCtx: AudioContext | null = null;
 
@@ -42,18 +42,18 @@ const createOscillator = (
 };
 
 export const playSelectSound = () => {
-  // High pitched "blip"
+
   createOscillator(1200, "sine", 0.1, 0.05);
   setTimeout(() => createOscillator(2000, "sine", 0.1, 0.03), 50);
 };
 
 export const playHoverSound = () => {
-  // Low "thrum"
+
   createOscillator(200, "square", 0.1, 0.02);
 };
 
 export const playEngageSound = () => {
-  // Power up sound
+
   const ctx = initAudio();
   if (!ctx) return;
 

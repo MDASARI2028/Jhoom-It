@@ -9,7 +9,7 @@ export default function TestingPanel() {
     const [lastApiStatus, setLastApiStatus] = useState<string>("");
     const [apiCallLog, setApiCallLog] = useState<Array<{ time: string; action: string; status: string }>>([]);
 
-    // Listen for API call events (we'll dispatch these from GestureController)
+
     useEffect(() => {
         const handleApiEvent = (event: CustomEvent) => {
             const { action, status } = event.detail;
@@ -29,7 +29,7 @@ export default function TestingPanel() {
                 🧪 TESTING PANEL
             </h3>
 
-            {/* Gesture Detection Status */}
+            {}
             <div className="mb-3">
                 <div className="text-cyan-300 text-[10px] mb-1">GESTURE DETECTION</div>
                 <div className="grid grid-cols-2 gap-2">
@@ -48,7 +48,7 @@ export default function TestingPanel() {
                 </div>
             </div>
 
-            {/* Last API Call */}
+            {}
             <div className="mb-3">
                 <div className="text-cyan-300 text-[10px] mb-1">LAST API CALL</div>
                 <div className="bg-gray-900/50 p-2 rounded">
@@ -62,7 +62,7 @@ export default function TestingPanel() {
                 </div>
             </div>
 
-            {/* API Call Log */}
+            {}
             <div>
                 <div className="text-cyan-300 text-[10px] mb-1">RECENT CALLS</div>
                 <div className="space-y-1 max-h-24 overflow-y-auto">
@@ -85,7 +85,7 @@ export default function TestingPanel() {
                 </div>
             </div>
 
-            {/* Status Indicators */}
+            {}
             <div className="mt-3 pt-3 border-t border-cyan-500/30 text-[9px] space-y-1">
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>

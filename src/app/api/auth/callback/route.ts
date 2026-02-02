@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
         const { access_token, refresh_token, expires_in } = data;
 
-        // Serve HTML that sets the cookie in the browser manually
+
         const html = `
         <!DOCTYPE html>
         <html>
@@ -39,11 +39,11 @@ export async function GET(request: Request) {
         <body>
             <h1>CONNECTING TO SPOTIFY...</h1>
             <script>
-                // Set Cookies Manually
+
                 document.cookie = "spotify_access_token=${access_token}; path=/; max-age=${expires_in}; samesite=lax";
                 ${refresh_token ? `document.cookie = "spotify_refresh_token=${refresh_token}; path=/; max-age=2592000; samesite=lax";` : ''}
                 
-                // Redirect
+
                 setTimeout(() => {
                     window.location.href = "/?connected=true";
                 }, 1000);

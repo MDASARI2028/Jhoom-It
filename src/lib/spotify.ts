@@ -20,7 +20,7 @@ export const generateAuthUrl = () => {
 };
 
 export const getAccessToken = async (code: string) => {
-    // Revert to Buffer for Node compatibility
+
     const basic = Buffer.from(`${client_id}:${client_secret}`).toString('base64');
 
     const params = new URLSearchParams({

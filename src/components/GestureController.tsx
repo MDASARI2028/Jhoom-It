@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -10,7 +10,7 @@ import {
 } from "@/utils/audio";
 import type { Results as HandsResults } from "@mediapipe/hands";
 
-// Helper to get cookie
+
 function getCookie(name: string) {
     if (typeof document === 'undefined') return null;
     const value = `; ${document.cookie}`;
@@ -34,9 +34,9 @@ export default React.memo(function GestureController({ minimized = false, classN
     const [activeDevice, setActiveDevice] = useState<string>("Searching for device...");
     const [localBackendConnected, setLocalBackendConnected] = useState(false);
 
-    // ... (existing refs)
 
-    // Check Local Backend Health
+
+
     useEffect(() => {
         const checkLocalBackend = async () => {
             try {
@@ -51,22 +51,22 @@ export default React.memo(function GestureController({ minimized = false, classN
             }
         };
         checkLocalBackend();
-        const interval = setInterval(checkLocalBackend, 10000); // Re-check every 10s
+        const interval = setInterval(checkLocalBackend, 10000); 
         return () => clearInterval(interval);
     }, []);
 
-    // Gesture state tracking
+
     const prevGestureLeft = useRef<GestureType>("IDLE");
     const prevGestureRight = useRef<GestureType>("IDLE");
     const lastHandUIUpdate = useRef<number>(0);
     const handUIThrottle = 50;
     const isMounted = useRef(true);
 
-    // Spotify Control Cooldowns
+
     const actionCooldown = useRef<number>(0);
 
     useEffect(() => {
-        // Check auth continuously (every 2s) to detect login
+
         const checkAuth = () => {
             const token = getCookie('spotify_access_token');
             const hasToken = !!token;
@@ -79,13 +79,13 @@ export default React.memo(function GestureController({ minimized = false, classN
             }
         };
 
-        checkAuth(); // Initial check
-        const interval = setInterval(checkAuth, 2000); // Check every 2s
+        checkAuth(); 
+        const interval = setInterval(checkAuth, 2000); 
 
         return () => clearInterval(interval);
     }, [isAuthenticated]);
 
-    // Fetch Active Device
+
     useEffect(() => {
         if (!isAuthenticated) return;
 
@@ -103,7 +103,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                 if (active) {
                     setActiveDevice(`🎵 Connected to: ${active.name}`);
                 } else if (data.devices?.length > 0) {
-                    // If devices exist but none are active, prompt user
+
                     setActiveDevice(`⚠️ Open Spotify on: ${data.devices[0].name}`);
                 } else {
                     setActiveDevice("❌ No active Spotify devices found");
@@ -115,12 +115,12 @@ export default React.memo(function GestureController({ minimized = false, classN
         };
 
         fetchDevice();
-        const interval = setInterval(fetchDevice, 5000); // Check every 5s
+        const interval = setInterval(fetchDevice, 5000); 
         return () => clearInterval(interval);
     }, [isAuthenticated]);
 
     const callSpotify = async (endpoint: string, method: string = 'POST') => {
-        // Map Spotify endpoints to Local Backend actions
+
         const actionMap: Record<string, string> = {
             'next': 'next',
             'previous': 'previous',
@@ -130,7 +130,7 @@ export default React.memo(function GestureController({ minimized = false, classN
 
         const localAction = actionMap[endpoint];
 
-        // 1. Try Local Backend First (Bypass Premium)
+
         if (localAction) {
             try {
                 console.log(`Trying Local Backend for: ${localAction}`);
@@ -145,15 +145,15 @@ export default React.memo(function GestureController({ minimized = false, classN
                     window.dispatchEvent(new CustomEvent('spotifyApiCall', {
                         detail: { action: endpoint, status: '✓ Local Success' }
                     }));
-                    return; // Success! No need to call Spotify API
+                    return; 
                 }
             } catch (e) {
                 console.warn("Local backend unreachable, falling back to Spotify API...", e);
-                // Continue to Spotify API fallback below
+
             }
         }
 
-        // 2. Fallback to Spotify Web API (Requires Premium)
+
         const token = getCookie('spotify_access_token');
         if (!token) {
             console.error('No Spotify token found');
@@ -176,7 +176,7 @@ export default React.memo(function GestureController({ minimized = false, classN
 
             if (!response.ok) {
                 const errorText = await response.text();
-                // Handle specific errors
+
                 if (response.status === 403) {
                     useStore.getState().addNotification("API Blocked: Premium Required", "warning");
                     window.dispatchEvent(new CustomEvent('spotifyApiCall', {
@@ -235,26 +235,26 @@ export default React.memo(function GestureController({ minimized = false, classN
                     if (!isMounted.current) return;
                     if (hands) await hands.send({ image: videoElement });
                 },
-                width: 640,  // Reduced from 1280
-                height: 480, // Reduced from 720
+                width: 640,  
+                height: 480, 
             });
 
             camera.start();
 
-            // State for gesture stability
+
             const gestureDurationMap = {
                 left: { gesture: "IDLE" as GestureType, frames: 0 },
                 right: { gesture: "IDLE" as GestureType, frames: 0 }
             };
-            const REQUIRED_HOLD_DURATION = 8; // Frames (~250ms at 30fps) - Filters twitching
-            const COOLDOWN_MS = 2000; // 2 seconds between actions
+            const REQUIRED_HOLD_DURATION = 8; 
+            const COOLDOWN_MS = 2000; 
 
             function onHandsResults(results: HandsResults) {
                 if (!isMounted.current || !canvasCtx) return;
                 canvasCtx.save();
                 canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-                // Draw video feed (mirrored)
+
                 canvasCtx.drawImage(
                     results.image,
                     0,
@@ -279,7 +279,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                         index,
                         landmarks,
                     ] of results.multiHandLandmarks.entries()) {
-                        // Drawing logic...
+
                         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
                             color: "rgba(30, 215, 96, 0.6)",
                             lineWidth: 2,
@@ -296,14 +296,14 @@ export default React.memo(function GestureController({ minimized = false, classN
                         const palmX = landmarks[9].x;
                         const palmY = landmarks[9].y;
 
-                        // STABILITY FILTER
-                        // We only accept the gesture if it has been held for REQUIRED_HOLD_DURATION frames
+
+
                         let stableGesture = "IDLE" as GestureType;
 
                         if (label === "Left") {
                             leftHand = landmarks;
 
-                            // Check if gesture changed
+
                             if (gestureDurationMap.left.gesture === rawGesture) {
                                 gestureDurationMap.left.frames++;
                             } else {
@@ -311,17 +311,17 @@ export default React.memo(function GestureController({ minimized = false, classN
                                 gestureDurationMap.left.frames = 0;
                             }
 
-                            // Only confirm if held
+
                             if (gestureDurationMap.left.frames >= REQUIRED_HOLD_DURATION) {
                                 stableGesture = rawGesture;
                             } else {
-                                stableGesture = "IDLE"; // Suppress noise
+                                stableGesture = "IDLE"; 
                             }
                             leftGesture = stableGesture;
 
                             const now = Date.now();
                             if (now - lastHandUIUpdate.current > handUIThrottle) {
-                                // UI shows raw gesture for responsiveness, but Action triggers on stable
+
                                 updateHandUI("left", { visible: true, x: palmX, y: palmY, gesture: rawGesture });
                                 lastHandUIUpdate.current = now;
                             }
@@ -365,8 +365,8 @@ export default React.memo(function GestureController({ minimized = false, classN
                 setHands(leftHand, rightHand);
                 setGestures(leftGesture, rightGesture);
 
-                // --- SPOTIFY ACTION TRIGGERS ---
-                // Only trigger if we have a STABLE gesture
+
+
                 handleSpotifyActions(leftGesture, rightGesture);
 
                 prevGestureLeft.current = leftGesture;
@@ -377,21 +377,21 @@ export default React.memo(function GestureController({ minimized = false, classN
 
             function handleSpotifyActions(left: GestureType, right: GestureType) {
                 const now = Date.now();
-                if (now - actionCooldown.current < COOLDOWN_MS) return; // 2s Cooldown
+                if (now - actionCooldown.current < COOLDOWN_MS) return; 
 
-                // Priority to Right hand
+
                 const activeGesture = right !== "IDLE" ? right : left;
                 if (activeGesture === "IDLE" || activeGesture === "PINCH") return;
 
                 const triggerUpdate = (action: string) => {
-                    // Dispatch event for Optimistic UI updates + API polling
+
                     window.dispatchEvent(new CustomEvent('spotifyOptimisticAction', { detail: { action } }));
                 };
 
-                console.log(`ACTION TRIGGERED: ${activeGesture}`); // Debug
+                console.log(`ACTION TRIGGERED: ${activeGesture}`); 
 
                 if (activeGesture === "VICTORY") {
-                    // NEXT TRACK
+
                     callSpotify('next');
                     triggerUpdate('next');
                     playHoverSound();
@@ -400,7 +400,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                     setTimeout(() => setGestureFlash(false), 200);
                     actionCooldown.current = now;
                 } else if (activeGesture === "GRAB") {
-                    // PAUSE
+
                     callSpotify('pause', 'PUT');
                     triggerUpdate('pause');
                     playEngageSound();
@@ -409,7 +409,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                     setTimeout(() => setGestureFlash(false), 200);
                     actionCooldown.current = now;
                 } else if (activeGesture === "PALM_OPEN") {
-                    // PLAY
+
                     callSpotify('play', 'PUT');
                     triggerUpdate('play');
                     playSelectSound();
@@ -418,7 +418,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                     setTimeout(() => setGestureFlash(false), 200);
                     actionCooldown.current = now;
                 } else if (activeGesture === "POINT") {
-                    // PREVIOUS
+
                     callSpotify('previous');
                     triggerUpdate('previous');
                     playHoverSound();
@@ -437,13 +437,13 @@ export default React.memo(function GestureController({ minimized = false, classN
                 const pinkyTip = landmarks[20];
                 const wrist = landmarks[0];
 
-                // Improved Extension Logic: Tip must be further from wrist than PIP joint
+
                 const isExtended = (tip: any, pipIdx: number) => {
                     const pip = landmarks[pipIdx];
                     const distTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
                     const distPip = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
-                    // Also check if tip is "above" pip (relative to wrist orientation approx)
-                    // Simplified: Tip distance > PIP distance * 1.2 ensures significant extension
+
+
                     return distTip > (distPip * 1.2);
                 };
 
@@ -452,18 +452,18 @@ export default React.memo(function GestureController({ minimized = false, classN
                 const ringExt = isExtended(ringTip, 14);
                 const pinkyExt = isExtended(pinkyTip, 18);
 
-                // Pinch detection (Tip to Tip distance)
+
                 const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
 
                 if (pinchDist < 0.05) return "PINCH";
 
-                // Logic Tree
-                if (indexExt && middleExt && ringExt && pinkyExt) return "PALM_OPEN"; // 5 fingers -> Play
-                if (!indexExt && !middleExt && !ringExt && !pinkyExt) return "GRAB";  // Fist -> Pause
-                if (indexExt && !middleExt && !ringExt && !pinkyExt) return "POINT";  // 1 finger -> Prev
-                if (indexExt && middleExt && !ringExt && !pinkyExt) return "VICTORY"; // 2 fingers -> Next
 
-                // Allow "Peace Sign" variations (sometimes thumb is out)
+                if (indexExt && middleExt && ringExt && pinkyExt) return "PALM_OPEN"; 
+                if (!indexExt && !middleExt && !ringExt && !pinkyExt) return "GRAB";  
+                if (indexExt && !middleExt && !ringExt && !pinkyExt) return "POINT";  
+                if (indexExt && middleExt && !ringExt && !pinkyExt) return "VICTORY"; 
+
+
                 if (indexExt && middleExt && !ringExt && !pinkyExt) return "VICTORY";
 
                 return "IDLE";
@@ -481,7 +481,7 @@ export default React.memo(function GestureController({ minimized = false, classN
 
     return (
         <div className={twMerge("relative z-0 bg-black overflow-hidden", className)}>
-            {/* Gesture Flash Effect */}
+            {}
             {gestureFlash && (
                 <div className="absolute inset-0 bg-green-500/20 pointer-events-none z-10 animate-pulse" />
             )}
@@ -490,11 +490,11 @@ export default React.memo(function GestureController({ minimized = false, classN
             <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full object-cover -scale-x-100 opacity-60"
-                width={640}  // Reduced
-                height={480} // Reduced
+                width={640}  
+                height={480} 
             />
 
-            {/* AUTH STATUS UI - Hidden if minimized */}
+            {}
             {!minimized && !isAuthenticated && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col items-center gap-4">
                     <a href="/api/auth/login" className="px-8 py-4 bg-[#1DB954] text-black font-bold text-xl rounded-full hover:scale-105 transition-transform flex items-center gap-3 shadow-[0_0_30px_#1DB954]">
@@ -513,7 +513,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                 </div>
             )}
 
-            {/* Auth Success + Instructions - Hidden if minimized */}
+            {}
             {!minimized && isAuthenticated && (
                 <div className="absolute top-6 right-6 z-50 max-w-xs">
                     <div className="bg-green-500/20 border border-green-500 rounded-lg p-3 backdrop-blur-md">
@@ -540,7 +540,7 @@ export default React.memo(function GestureController({ minimized = false, classN
                 </div>
             )}
 
-            {/* GESTURE GUIDE UI - Hidden if minimized */}
+            {}
             {!minimized && (
                 <div className="absolute bottom-10 left-10 z-50 pointer-events-none">
                     <div className="bg-black/60 backdrop-blur-md border border-green-500/30 rounded-xl p-4 text-green-100 font-mono text-xs tracking-wider shadow-[0_0_20px_rgba(30,215,96,0.1)]">
