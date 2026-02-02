@@ -23,10 +23,15 @@ interface TrackInfo {
     duration: number;
 }
 
+import CardVisualizer from "./CardVisualizer";
+
 export default function CurrentTrackDisplay() {
     const [track, setTrack] = useState<TrackInfo | null>(null);
     const [error, setError] = useState<string>("");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [localProgress, setLocalProgress] = useState(0);
+    // State for debugging
+    const [debugInfo, setDebugInfo] = useState({ token: "Checking...", status: "Init", lastUpdate: "-" });
 
     useEffect(() => {
         let isMuted = false;
@@ -34,7 +39,13 @@ export default function CurrentTrackDisplay() {
         const fetchCurrentTrack = async () => {
             if (isMuted) return;
             const token = getCookie('spotify_access_token');
-            if (!token) return;
+
+            setDebugInfo(prev => ({ ...prev, token: token ? "OK" : "MISSING " + (document.cookie.length) }));
+
+            if (!token) {
+                setError("No Spotify Token Found. Please Log In.");
+                return;
+            }
 
             try {
                 // Add timestamp to prevent caching
@@ -44,12 +55,22 @@ export default function CurrentTrackDisplay() {
                     }
                 });
 
+                setDebugInfo(prev => ({ ...prev, status: `HTTP ${response.status}`, lastUpdate: new Date().toLocaleTimeString() }));
+
                 if (response.status === 204) {
+                    setError("Spotify Open, But Not Playing.");
+                    // Don't clear track immediately to avoid flickering, but maybe mark as paused
+                    setTrack(prev => prev ? { ...prev, isPlaying: false } : null);
+                    return;
+                }
+
+                if (response.status === 401) {
+                    setError("Token Expired. Please Re-login.");
                     return;
                 }
 
                 if (!response.ok) {
-                    setError("");
+                    setError(`Spotify API Error: ${response.status}`);
                     return;
                 }
 
@@ -58,9 +79,6 @@ export default function CurrentTrackDisplay() {
                     // Check if track actually changed to log it
                     setTrack(prev => {
                         const newArt = data.item.album.images[0]?.url || '';
-                        if (prev && prev.albumArt !== newArt) {
-                            console.log("Track changed, new art:", newArt);
-                        }
                         return {
                             name: data.item.name,
                             artist: data.item.artists.map((a: any) => a.name).join(', '),
@@ -73,9 +91,13 @@ export default function CurrentTrackDisplay() {
                     });
                     setLocalProgress(data.progress_ms);
                     setError("");
+                } else {
+                    // Podcast or ad might be playing (typical if response is OK but item is null)
+                    setError("Unknown Content (Ad/Podcast?)");
                 }
-            } catch (e) {
-                // Silently fail
+            } catch (e: any) {
+                setError(`Fetch Error: ${e.message}`);
+                setDebugInfo(prev => ({ ...prev, status: "Network Error" }));
             }
         };
 
@@ -89,128 +111,146 @@ export default function CurrentTrackDisplay() {
         const handleOptimisticUpdate = (e: Event) => {
             const action = (e as CustomEvent).detail.action;
             console.log(`Optimistic Update: ${action}`);
-
-            // 1. Instant UI Feedback (Lie to the user temporarily)
             setTrack(prev => {
                 if (!prev) return prev;
                 if (action === 'pause') return { ...prev, isPlaying: false };
                 if (action === 'play') return { ...prev, isPlaying: true };
-                if (action === 'next' || action === 'previous') return { ...prev, progress: 0 }; // Reset bar
                 return prev;
             });
-
-            // 2. Poll aggressively to get the REAL data (Sync)
-            setTimeout(fetchCurrentTrack, 100);
             setTimeout(fetchCurrentTrack, 500);
-            setTimeout(fetchCurrentTrack, 1000);
-            setTimeout(fetchCurrentTrack, 2000);
-            setTimeout(fetchCurrentTrack, 3500);
         };
         window.addEventListener('spotifyOptimisticAction', handleOptimisticUpdate);
 
-        // Local progress timer for smooth UI
+        // Local progress timer
         const progressInterval = setInterval(() => {
             setTrack((current) => {
                 if (!current || !current.isPlaying) return current;
-                // Increment if playing
                 const newProgress = Math.min(current.progress + 1000, current.duration);
                 return { ...current, progress: newProgress };
             });
         }, 1000);
 
         return () => {
-            isMuted = true; // effective unmount cleanup
+            isMuted = true;
             clearInterval(fetchInterval);
             clearInterval(progressInterval);
             window.removeEventListener('spotifyOptimisticAction', handleOptimisticUpdate);
         };
     }, []);
 
-    if (!track && !error) return null;
+    const currentTrack = track || {
+        name: "No Track Detected",
+        artist: error || "Waiting for Spotify...",
+        album: "Status: " + debugInfo.status,
+        albumArt: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png",
+        isPlaying: false,
+        progress: 0,
+        duration: 1
+    };
 
-    const progressPercent = track ? (track.progress / track.duration) * 100 : 0;
+    // Use displayTrack as a fallback variable name if code references it
+    const displayTrack = currentTrack;
 
+    const progressPercent = currentTrack.duration > 0 ? (currentTrack.progress / currentTrack.duration) * 100 : 0;
+    const isMissingToken = debugInfo.token.startsWith("MISSING");
+
+    // ALWAYS RENDER THE CARD. If no track, it shows the error state/fallback above.
     return (
         <AnimatePresence>
-            {track && (
-                <motion.div
-                    initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                    className="fixed top-32 left-8 z-50 font-sans"
-                >
-                    {/* Main Card */}
-                    <div className="bg-black/60 backdrop-blur-xl border border-green-500/30 rounded-3xl p-6 shadow-[0_0_30px_rgba(34,197,94,0.15)] flex gap-6 items-center w-[32rem]">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative z-50 p-4 font-sans"
+            >
+                {/* Main Card */}
+                <div className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col md:flex-row gap-8 items-center max-w-4xl border-t border-l border-white/20 relative">
 
-                        {/* Large Album Art - Sharp & Big */}
-                        <div className="relative flex-shrink-0 group">
-                            <motion.div
-                                className="w-36 h-36 rounded-2xl overflow-hidden shadow-2xl border border-white/10"
-                                whileHover={{ scale: 1.02 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <img
-                                    key={track.albumArt} // Force re-render on change
-                                    src={track.albumArt}
-                                    alt={track.album}
-                                    className="w-full h-full object-cover"
-                                />
-                                {track.isPlaying && (
-                                    <div className="absolute inset-0 bg-black/10 transition-colors" />
-                                )}
-                            </motion.div>
+                    {/* Visualizer Attached to Card */}
+                    <CardVisualizer />
 
+                    {/* Album Art */}
+                    <div className="relative flex-shrink-0 group">
+                        <motion.div
+                            className="w-56 h-56 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl border border-white/5"
+                            whileHover={{ scale: 1.02 }}
+                        >
+                            <img
+                                key={currentTrack.albumArt}
+                                src={currentTrack.albumArt}
+                                alt={currentTrack.album}
+                                className="w-full h-full object-cover"
+                            />
+                        </motion.div>
+                    </div>
 
+                    {/* Content Section */}
+                    <div className="flex-1 min-w-[20rem] flex flex-col justify-center gap-6">
+                        {/* Text Info */}
+                        <div className="space-y-1 text-center md:text-left">
+                            <h3 className="text-white font-bold text-3xl md:text-4xl truncate leading-tight tracking-tight">{currentTrack.name}</h3>
+                            <p className="text-green-400 text-lg md:text-xl font-medium truncate">{currentTrack.artist}</p>
+                            <p className="text-white/40 text-sm uppercase tracking-widest font-mono">{currentTrack.album}</p>
                         </div>
 
-                        {/* Content Section */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-center h-full gap-3">
-
-                            {/* Text Info */}
-                            <div>
-                                <h3 className="text-white font-bold text-2xl truncate leading-tight tracking-tight mb-1">{track.name}</h3>
-                                <p className="text-gray-400 text-sm truncate font-medium">{track.artist}</p>
-                                <p className="text-gray-600 text-xs truncate mt-0.5 uppercase tracking-wide">{track.album}</p>
+                        {/* LOGIN BUTTON FOR MISSING TOKEN */}
+                        {isMissingToken && (
+                            <div className="flex justify-center md:justify-start py-2">
+                                <a
+                                    href="/api/auth/login"
+                                    className="px-8 py-3 bg-[#1DB954] text-black font-bold text-lg rounded-full hover:scale-105 transition-transform flex items-center gap-2 shadow-[0_0_20px_rgba(30,215,96,0.3)] animate-pulse"
+                                >
+                                    <span>CONNECT SPOTIFY</span>
+                                </a>
                             </div>
+                        )}
 
-                            {/* Progress & Time */}
-                            <div className="w-full space-y-1.5">
-                                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        {/* Progress - Only show if valid token */}
+                        {!isMissingToken && (
+                            <div className="w-full space-y-2">
+                                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                                     <motion.div
-                                        className="h-full bg-green-500 rounded-full relative shadow-[0_0_10px_#4ade80]"
+                                        className="h-full bg-green-500 rounded-full"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${progressPercent}%` }}
                                         transition={{ ease: "linear", duration: 0.5 }}
-                                    ></motion.div>
+                                    />
                                 </div>
-                                <div className="flex justify-between text-[10px] text-gray-500 font-mono font-bold tracking-wider">
-                                    <span>{formatTime(track.progress)}</span>
-                                    <span>{formatTime(track.duration)}</span>
+                                <div className="flex justify-between text-xs text-white/40 font-mono font-bold tracking-wider">
+                                    <span>{formatTime(currentTrack.progress)}</span>
+                                    <span>{formatTime(currentTrack.duration)}</span>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Neat Control Buttons */}
-                            <div className="flex items-center gap-4 mt-1">
-                                <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center transition-all text-white/70 hover:text-white">
-                                    <SkipBack size={20} fill="currentColor" />
+                        {/* Controls - Only show if valid token */}
+                        {!isMissingToken && (
+                            <div className="flex items-center justify-center md:justify-start gap-6 pt-2">
+                                <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white hover:scale-110">
+                                    <SkipBack size={24} fill="currentColor" />
                                 </button>
 
-                                <button className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg hover:scale-105 ${track.isPlaying ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-white text-black hover:bg-gray-200'}`}>
-                                    {track.isPlaying ? (
-                                        <Pause size={24} fill="currentColor" />
+                                <button className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-xl hover:scale-105 ${displayTrack.isPlaying ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-white text-black hover:bg-gray-200'}`}>
+                                    {displayTrack.isPlaying ? (
+                                        <Pause size={32} fill="currentColor" />
                                     ) : (
-                                        <Play size={24} fill="currentColor" />
+                                        <Play size={32} fill="currentColor" className="ml-1" />
                                     )}
                                 </button>
 
-                                <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center transition-all text-white/70 hover:text-white">
-                                    <SkipForward size={20} fill="currentColor" />
+                                <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white hover:scale-110">
+                                    <SkipForward size={24} fill="currentColor" />
                                 </button>
                             </div>
+                        )}
+
+                        {/* Debug Info (Only visible if issues) */}
+                        <div className="text-[10px] font-mono text-white/30 text-center border-t border-white/5 pt-2 mt-2">
+                            Token: {debugInfo.token} | Status: {debugInfo.status} | Last: {debugInfo.lastUpdate}
                         </div>
                     </div>
-                </motion.div>
-            )}
+                </div>
+            </motion.div>
         </AnimatePresence>
     );
 }

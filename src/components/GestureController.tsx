@@ -19,7 +19,14 @@ function getCookie(name: string) {
     return null;
 }
 
-export default React.memo(function GestureController() {
+import { twMerge } from "tailwind-merge";
+
+interface GestureControllerProps {
+    minimized?: boolean;
+    className?: string;
+}
+
+export default React.memo(function GestureController({ minimized = false, className = "" }: GestureControllerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -210,7 +217,7 @@ export default React.memo(function GestureController() {
 
             hands = new Hands({
                 locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
                 },
             });
 
@@ -233,6 +240,14 @@ export default React.memo(function GestureController() {
             });
 
             camera.start();
+
+            // State for gesture stability
+            const gestureDurationMap = {
+                left: { gesture: "IDLE" as GestureType, frames: 0 },
+                right: { gesture: "IDLE" as GestureType, frames: 0 }
+            };
+            const REQUIRED_HOLD_DURATION = 8; // Frames (~250ms at 30fps) - Filters twitching
+            const COOLDOWN_MS = 2000; // 2 seconds between actions
 
             function onHandsResults(results: HandsResults) {
                 if (!isMounted.current || !canvasCtx) return;
@@ -264,6 +279,7 @@ export default React.memo(function GestureController() {
                         index,
                         landmarks,
                     ] of results.multiHandLandmarks.entries()) {
+                        // Drawing logic...
                         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
                             color: "rgba(30, 215, 96, 0.6)",
                             lineWidth: 2,
@@ -276,38 +292,81 @@ export default React.memo(function GestureController() {
                         });
 
                         const label = results.multiHandedness[index]?.label;
-                        const gesture = detectGesture(landmarks);
+                        const rawGesture = detectGesture(landmarks);
                         const palmX = landmarks[9].x;
                         const palmY = landmarks[9].y;
 
+                        // STABILITY FILTER
+                        // We only accept the gesture if it has been held for REQUIRED_HOLD_DURATION frames
+                        let stableGesture = "IDLE" as GestureType;
+
                         if (label === "Left") {
                             leftHand = landmarks;
-                            leftGesture = gesture;
+
+                            // Check if gesture changed
+                            if (gestureDurationMap.left.gesture === rawGesture) {
+                                gestureDurationMap.left.frames++;
+                            } else {
+                                gestureDurationMap.left.gesture = rawGesture;
+                                gestureDurationMap.left.frames = 0;
+                            }
+
+                            // Only confirm if held
+                            if (gestureDurationMap.left.frames >= REQUIRED_HOLD_DURATION) {
+                                stableGesture = rawGesture;
+                            } else {
+                                stableGesture = "IDLE"; // Suppress noise
+                            }
+                            leftGesture = stableGesture;
+
                             const now = Date.now();
                             if (now - lastHandUIUpdate.current > handUIThrottle) {
-                                updateHandUI("left", { visible: true, x: palmX, y: palmY, gesture: gesture });
+                                // UI shows raw gesture for responsiveness, but Action triggers on stable
+                                updateHandUI("left", { visible: true, x: palmX, y: palmY, gesture: rawGesture });
                                 lastHandUIUpdate.current = now;
                             }
                         }
+
                         if (label === "Right") {
                             rightHand = landmarks;
-                            rightGesture = gesture;
+
+                            if (gestureDurationMap.right.gesture === rawGesture) {
+                                gestureDurationMap.right.frames++;
+                            } else {
+                                gestureDurationMap.right.gesture = rawGesture;
+                                gestureDurationMap.right.frames = 0;
+                            }
+
+                            if (gestureDurationMap.right.frames >= REQUIRED_HOLD_DURATION) {
+                                stableGesture = rawGesture;
+                            } else {
+                                stableGesture = "IDLE";
+                            }
+                            rightGesture = stableGesture;
+
                             const now = Date.now();
                             if (now - lastHandUIUpdate.current > handUIThrottle) {
-                                updateHandUI("right", { visible: true, x: palmX, y: palmY, gesture: gesture });
+                                updateHandUI("right", { visible: true, x: palmX, y: palmY, gesture: rawGesture });
                                 lastHandUIUpdate.current = now;
                             }
                         }
                     }
                 }
 
-                if (!leftHand) updateHandUI("left", { visible: false });
-                if (!rightHand) updateHandUI("right", { visible: false });
+                if (!leftHand) {
+                    updateHandUI("left", { visible: false });
+                    gestureDurationMap.left.frames = 0;
+                }
+                if (!rightHand) {
+                    updateHandUI("right", { visible: false });
+                    gestureDurationMap.right.frames = 0;
+                }
 
                 setHands(leftHand, rightHand);
                 setGestures(leftGesture, rightGesture);
 
                 // --- SPOTIFY ACTION TRIGGERS ---
+                // Only trigger if we have a STABLE gesture
                 handleSpotifyActions(leftGesture, rightGesture);
 
                 prevGestureLeft.current = leftGesture;
@@ -318,15 +377,18 @@ export default React.memo(function GestureController() {
 
             function handleSpotifyActions(left: GestureType, right: GestureType) {
                 const now = Date.now();
-                if (now - actionCooldown.current < 1000) return; // Reduced to 1s for snappier feel
+                if (now - actionCooldown.current < COOLDOWN_MS) return; // 2s Cooldown
 
                 // Priority to Right hand
                 const activeGesture = right !== "IDLE" ? right : left;
+                if (activeGesture === "IDLE" || activeGesture === "PINCH") return;
 
                 const triggerUpdate = (action: string) => {
                     // Dispatch event for Optimistic UI updates + API polling
                     window.dispatchEvent(new CustomEvent('spotifyOptimisticAction', { detail: { action } }));
                 };
+
+                console.log(`ACTION TRIGGERED: ${activeGesture}`); // Debug
 
                 if (activeGesture === "VICTORY") {
                     // NEXT TRACK
@@ -375,12 +437,14 @@ export default React.memo(function GestureController() {
                 const pinkyTip = landmarks[20];
                 const wrist = landmarks[0];
 
-                const isExtended = (tip: any, pip: number) => {
-                    const pipMark = landmarks[pip];
-                    return (
-                        Math.hypot(tip.x - wrist.x, tip.y - wrist.y) >
-                        Math.hypot(pipMark.x - wrist.x, pipMark.y - wrist.y)
-                    );
+                // Improved Extension Logic: Tip must be further from wrist than PIP joint
+                const isExtended = (tip: any, pipIdx: number) => {
+                    const pip = landmarks[pipIdx];
+                    const distTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+                    const distPip = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
+                    // Also check if tip is "above" pip (relative to wrist orientation approx)
+                    // Simplified: Tip distance > PIP distance * 1.2 ensures significant extension
+                    return distTip > (distPip * 1.2);
                 };
 
                 const indexExt = isExtended(indexTip, 6);
@@ -388,12 +452,18 @@ export default React.memo(function GestureController() {
                 const ringExt = isExtended(ringTip, 14);
                 const pinkyExt = isExtended(pinkyTip, 18);
 
+                // Pinch detection (Tip to Tip distance)
                 const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
 
-                if (pinchDist < 0.08) return "PINCH"; // Increased from 0.05 for easier detection
-                if (indexExt && middleExt && ringExt && pinkyExt) return "PALM_OPEN";
-                if (!indexExt && !middleExt && !ringExt && !pinkyExt) return "GRAB";
-                if (indexExt && !middleExt && !ringExt && !pinkyExt) return "POINT";
+                if (pinchDist < 0.05) return "PINCH";
+
+                // Logic Tree
+                if (indexExt && middleExt && ringExt && pinkyExt) return "PALM_OPEN"; // 5 fingers -> Play
+                if (!indexExt && !middleExt && !ringExt && !pinkyExt) return "GRAB";  // Fist -> Pause
+                if (indexExt && !middleExt && !ringExt && !pinkyExt) return "POINT";  // 1 finger -> Prev
+                if (indexExt && middleExt && !ringExt && !pinkyExt) return "VICTORY"; // 2 fingers -> Next
+
+                // Allow "Peace Sign" variations (sometimes thumb is out)
                 if (indexExt && middleExt && !ringExt && !pinkyExt) return "VICTORY";
 
                 return "IDLE";
@@ -410,7 +480,7 @@ export default React.memo(function GestureController() {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-0 bg-black">
+        <div className={twMerge("relative z-0 bg-black overflow-hidden", className)}>
             {/* Gesture Flash Effect */}
             {gestureFlash && (
                 <div className="absolute inset-0 bg-green-500/20 pointer-events-none z-10 animate-pulse" />
@@ -424,8 +494,8 @@ export default React.memo(function GestureController() {
                 height={480} // Reduced
             />
 
-            {/* AUTH STATUS UI */}
-            {!isAuthenticated && (
+            {/* AUTH STATUS UI - Hidden if minimized */}
+            {!minimized && !isAuthenticated && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col items-center gap-4">
                     <a href="/api/auth/login" className="px-8 py-4 bg-[#1DB954] text-black font-bold text-xl rounded-full hover:scale-105 transition-transform flex items-center gap-3 shadow-[0_0_30px_#1DB954]">
                         <span>CONNECT SPOTIFY</span>
@@ -443,10 +513,8 @@ export default React.memo(function GestureController() {
                 </div>
             )}
 
-
-
-            {/* Auth Success + Instructions */}
-            {isAuthenticated && (
+            {/* Auth Success + Instructions - Hidden if minimized */}
+            {!minimized && isAuthenticated && (
                 <div className="absolute top-6 right-6 z-50 max-w-xs">
                     <div className="bg-green-500/20 border border-green-500 rounded-lg p-3 backdrop-blur-md">
                         <div className="flex items-center gap-2 text-green-400 font-mono text-sm">
@@ -472,42 +540,44 @@ export default React.memo(function GestureController() {
                 </div>
             )}
 
-            {/* GESTURE GUIDE UI */}
-            <div className="absolute bottom-10 left-10 z-50 pointer-events-none">
-                <div className="bg-black/60 backdrop-blur-md border border-green-500/30 rounded-xl p-4 text-green-100 font-mono text-xs tracking-wider shadow-[0_0_20px_rgba(30,215,96,0.1)]">
-                    <h3 className="text-green-400 font-bold mb-3 border-b border-green-500/30 pb-1">SPOTIFY COMMANDS</h3>
-                    <ul className="space-y-2">
-                        <li className="flex items-center gap-3">
-                            <span className="text-xl">✊</span>
-                            <div>
-                                <span className="text-green-300 font-bold">GRAB</span>
-                                <p className="text-[10px] opacity-70">PAUSE</p>
-                            </div>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <span className="text-xl">🖐️</span>
-                            <div>
-                                <span className="text-green-300 font-bold">PALM OPEN</span>
-                                <p className="text-[10px] opacity-70">PLAY</p>
-                            </div>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <span className="text-xl">✌️</span>
-                            <div>
-                                <span className="text-green-300 font-bold">VICTORY</span>
-                                <p className="text-[10px] opacity-70">NEXT TRACK</p>
-                            </div>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <span className="text-xl">👆</span>
-                            <div>
-                                <span className="text-green-300 font-bold">POINT</span>
-                                <p className="text-[10px] opacity-70">PREVIOUS</p>
-                            </div>
-                        </li>
-                    </ul>
+            {/* GESTURE GUIDE UI - Hidden if minimized */}
+            {!minimized && (
+                <div className="absolute bottom-10 left-10 z-50 pointer-events-none">
+                    <div className="bg-black/60 backdrop-blur-md border border-green-500/30 rounded-xl p-4 text-green-100 font-mono text-xs tracking-wider shadow-[0_0_20px_rgba(30,215,96,0.1)]">
+                        <h3 className="text-green-400 font-bold mb-3 border-b border-green-500/30 pb-1">SPOTIFY COMMANDS</h3>
+                        <ul className="space-y-2">
+                            <li className="flex items-center gap-3">
+                                <span className="text-xl">✊</span>
+                                <div>
+                                    <span className="text-green-300 font-bold">GRAB</span>
+                                    <p className="text-[10px] opacity-70">PAUSE</p>
+                                </div>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <span className="text-xl">🖐️</span>
+                                <div>
+                                    <span className="text-green-300 font-bold">PALM OPEN</span>
+                                    <p className="text-[10px] opacity-70">PLAY</p>
+                                </div>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <span className="text-xl">✌️</span>
+                                <div>
+                                    <span className="text-green-300 font-bold">VICTORY</span>
+                                    <p className="text-[10px] opacity-70">NEXT TRACK</p>
+                                </div>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <span className="text-xl">👆</span>
+                                <div>
+                                    <span className="text-green-300 font-bold">POINT</span>
+                                    <p className="text-[10px] opacity-70">PREVIOUS</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 });

@@ -7,7 +7,7 @@ export default function NotificationSystem() {
     const { notifications } = useStore();
 
     return (
-        <div className="fixed top-20 right-10 z-[100] flex flex-col gap-2 pointer-events-none">
+        <div className="fixed top-36 left-8 z-[100] flex flex-col gap-2 pointer-events-none">
             <AnimatePresence>
                 {notifications.map((notif) => (
                     <motion.div
