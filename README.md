@@ -1,80 +1,84 @@
-# J.A.R.V.I.S. HUD - Gemini 3 Pro Experiment
+# Jhoom It - Spotify Gesture Controller
 
-A next-generation Augmented Reality interface built with **Next.js 16**, **Three.js**, and **MediaPipe**. This project serves as a technical showcase and experiment powered by the coding capabilities of **Gemini 3 Pro**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black" alt="Next.js" />
+  <img src="https://img.shields.io/badge/MediaPipe-Computer_Vision-blue" alt="MediaPipe" />
+  <img src="https://img.shields.io/badge/Spotify-API-green" alt="Spotify" />
+</p>
 
-![Project Preview](./src/app/opengraph-image.png)
-
-## 🧪 The Experiment
-
-This entire codebase was architected and implemented with the assistance of **Gemini 3 Pro**. The goal was to push the boundaries of AI-assisted web development, creating a fully functional, immersive AR experience that runs entirely in the browser without heavy external dependencies.
+**Jhoom It** is a futuristic, touchless interface for controlling your music. Using your webcam and advanced computer vision, it allows you to Play, Pause, and Skip tracks on Spotify with simple hand gestures—just like magic.
 
 ## 🚀 Features
 
-- **Advanced Gesture Control**: Control the interface naturally using your hands.
-  - **Swipe (Open Palm)**: Switch between holographic modules (Arc Reactor, Global Net, Solar Array).
-  - **Grab (Fist)**: Rotate 3D models in real-time.
-  - **Pinch**: Scale holograms with precision.
-- **Biometric Face HUD**: Real-time face tracking with a "Target Locked" tactical visor overlay.
-- **Immersive 3D Holograms**: Three distinct interactive scenes rendered with React Three Fiber.
-- **Dynamic Audio Synthesis**: Custom sound engine using the Web Audio API (no external assets).
-- **Performance Optimized**: Built on Next.js 16 with Turbopack and Framer Motion springs for smooth 60fps performance.
+-   **Touchless Control**: Use hand gestures to control playback without touching your keyboard or mouse.
+-   **Local Key Control**: Works with **any** media player (Spotify Free, YouTube Music, etc.) by simulating media keys.
+-   **Spotify Integration**: Connects to your Spotify account to display "Now Playing" info and high-res album art.
+-   **Zero Lag UI**: Features "Optimistic Updates" for instant visual feedback.
+-   **Futuristic HUD**: A clean, glassmorphism-inspired interface with real-time hand tracking visuals.
+
+## 🎮 Gestures
+
+| Gesture | Action |
+| :--- | :--- |
+| **✋ Open Palm** | **Play / Resume** |
+| **✊ Fist (Grab)** | **Pause** |
+| **✌️ Victory (V)** | **Next Track** |
+| **👆 Point** | **Previous Track** |
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Styling**: Tailwind CSS
-- **3D Graphics**: Three.js / React Three Fiber / Drei
-- **Computer Vision**: MediaPipe (Hands & Face Mesh)
-- **Animations**: Framer Motion
-- **State Management**: Zustand
-
-## 🎮 Controls
-
-| Gesture                            | Action                           |
-| :--------------------------------- | :------------------------------- |
-| **Open Palm (Right Hand) + Swipe** | Switch active scene (Left/Right) |
-| **Fist (Grab)**                    | Rotate the active hologram       |
-| **Pinch (Two Hands)**              | Scale the hologram up or down    |
-| **Face Camera**                    | Engage Target Lock HUD           |
+-   **Frontend**: Next.js 16, Tailwind CSS, Framer Motion
+-   **Computer Vision**: Google MediaPipe (Hands)
+-   **Backend (Local)**: Python (Flask + PyAutoGUI) for media key simulation.
+-   **State Management**: Zustand
 
 ## 📦 Getting Started
 
-1.  **Clone the repository**
+### Prerequisites
+-   Node.js & npm
+-   Python 3.x (for local control)
+-   A webcam
 
+### Installation
+
+1.  **Clone the repository**
     ```bash
-    git clone https://github.com/suryanshchourasia/jarvis-hud.git
-    cd jarvis-hud
+    git clone https://github.com/MDASARI2028/Jhoom-It.git
+    cd Jhoom-It
     ```
 
-2.  **Install dependencies**
-
+2.  **Install Frontend Dependencies**
     ```bash
     npm install
     ```
 
-3.  **Run the development server**
+3.  **Install Python Dependencies (for Local Control)**
+    ```bash
+    pip install -r local_control/requirements.txt
+    ```
 
+4.  **Run the Application**
+    
+    Open two terminals:
+    
+    *Terminal 1 (Frontend):*
     ```bash
     npm run dev
     ```
+    
+    *Terminal 2 (Local Control Server):*
+    ```bash
+    python local_control/server.py
+    ```
 
-4.  **Open your browser**
+5.  **Open in Browser**
     Navigate to `http://localhost:3000`. Allow camera access when prompted.
 
-## ⚠️ Requirements
+---
 
-- A device with a webcam.
-- A modern browser (Chrome/Edge/Safari/Firefox) with WebGL support.
-- Good lighting for optimal hand/face tracking.
+## ⚠️ Note on Spotify Premium
+While the app can read track info for everyone, direct API control requires **Spotify Premium**. However, the included **Local Control Python Script** allows it to work for **Free users** too by pressing your computer's media keys!
 
 ---
 
-## 🔗 Connect
-
-- **X (Twitter)**: [@suryanshchourasia](https://x.com/suryansh777777)
-- **LinkedIn**: [Suryansh Chourasia](https://linkedin.com/in/suryansh777777)
-- **GitHub**: [@suryanshchourasia](https://github.com/suryansh777777)
-
----
-
-_Generated and refined with Gemini 3 Pro._
+*Made with ❤️ by Monis Dasari*

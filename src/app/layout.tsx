@@ -24,24 +24,22 @@ const shareTechMono = Share_Tech_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "J.A.R.V.I.S. HUD",
-  description: "Advanced Holographic User Interface",
+  title: "Jhoom It - Spotify Gesture Controller",
+  description: "Touchless music control interface powered by Computer Vision",
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "J.A.R.V.I.S. HUD",
-    description: "Advanced Holographic User Interface",
-    url: "https://jarvis-cv.vercel.app/",
-    siteName: "J.A.R.V.I.S. HUD",
+    title: "Jhoom It",
+    description: "Control Spotify with hand gestures using MediaPipe and React.",
+    siteName: "Jhoom It",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "J.A.R.V.I.S. HUD",
-    description: "Advanced Holographic User Interface",
-    creator: "@suryansh777777",
+    title: "Jhoom It",
+    description: "Touchless music control interface.",
   },
 };
 
