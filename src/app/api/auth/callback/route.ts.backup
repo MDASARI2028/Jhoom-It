@@ -1,0 +1,98 @@
+import { getAccessToken } from '@/lib/spotify';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
+    console.log('--- CALLBACK ROUTE ENTRY ---'); // CRITICAL LOG
+    try {
+        console.log('Parsing URL...');
+        const { searchParams } = new URL(request.url);
+        const code = searchParams.get('code');
+        const error = searchParams.get('error');
+
+        console.log('=== SPOTIFY CALLBACK ===');
+        console.log('Code present:', !!code);
+        console.log('Error param:', error);
+
+        if (error) {
+            console.error('Spotify auth error:', error);
+            return NextResponse.redirect(new URL('/?error=' + error, request.url));
+        }
+
+        if (!code) {
+            console.error('No code provided in callback');
+            return NextResponse.json({ error: 'No code provided' }, { status: 400 });
+        }
+
+        console.log('Exchanging code for token...');
+        
+        // Wrap specific dangerous operations
+        let data;
+        try {
+            data = await getAccessToken(code);
+        } catch (e) {
+            console.error('getAccessToken failed:', e);
+            throw new Error('Failed to exchange code for token: ' + String(e));
+        }
+
+        if (!data) {
+             throw new Error('No data received from Spotify');
+        }
+
+        if (data.error) {
+            console.error('Token exchange error response:', data);
+            return NextResponse.json({ error: data.error, details: data.error_description }, { status: 400 });
+        }
+
+        const { access_token, refresh_token, expires_in } = data;
+        
+        if (!access_token) {
+            console.error('No access_token in response:', data);
+            throw new Error('No access_token received');
+        }
+
+        console.log('✓ Token received, expires in:', expires_in);
+        
+        const cookieStore = await cookies();
+
+        // Set cookies with explicit settings for localhost
+        try {
+            cookieStore.set('spotify_access_token', access_token, {
+                path: '/',
+                maxAge: expires_in,
+                httpOnly: false,
+                secure: false, // Allow HTTP for localhost
+                sameSite: 'lax'
+            });
+            console.log('✓ Access token cookie set');
+
+            if (refresh_token) {
+                cookieStore.set('spotify_refresh_token', refresh_token, {
+                    path: '/',
+                    maxAge: 30 * 24 * 60 * 60,
+                    httpOnly: false,
+                    secure: false,
+                    sameSite: 'lax'
+                });
+                console.log('✓ Refresh token cookie set');
+            }
+        } catch (cookieError) {
+            console.error('Cookie setting failed:', cookieError);
+            // Continue anyway? No, auth won't work.
+            throw new Error('Failed to set cookies');
+        }
+
+        console.log('Redirecting to home...');
+        return NextResponse.redirect(new URL('/', request.url));
+
+    } catch (error) {
+        console.error('FATAL LOGIC ERROR in callback:', error);
+        // Return a JSON response instead of crashing, so the user sees something
+        return NextResponse.json({ 
+            error: 'Internal Server Error', 
+            details: error instanceof Error ? error.message : String(error)
+        }, { status: 500 });
+    }
+}
