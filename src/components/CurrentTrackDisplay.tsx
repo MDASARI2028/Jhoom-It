@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume1, Volume2 } from "lucide-react";
 
 
 function getCookie(name: string) {
@@ -138,6 +138,18 @@ export default function CurrentTrackDisplay() {
         };
     }, []);
 
+    const handleVolume = async (action: 'vol_up' | 'vol_down') => {
+        try {
+            await fetch('http://localhost:5001/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+        } catch (e) {
+            console.error("Volume control failed", e);
+        }
+    };
+
     const currentTrack = track || {
         name: "No Track Detected",
         artist: error || "Waiting for Spotify...",
@@ -163,37 +175,52 @@ export default function CurrentTrackDisplay() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="relative z-50 p-4 font-sans"
             >
-                {}
+                { }
                 <div className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col md:flex-row gap-8 items-center max-w-4xl border-t border-l border-white/20 relative">
 
-                    {}
+                    { }
                     <CardVisualizer />
 
-                    {}
-                    <div className="relative flex-shrink-0 group">
+                    { }
+                    {/* Album Art with Transition */}
+                    <div className="relative flex-shrink-0 group w-56 h-56 md:w-72 md:h-72">
                         <motion.div
-                            className="w-56 h-56 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl border border-white/5"
+                            className="w-full h-full rounded-2xl overflow-hidden shadow-2xl border border-white/5 relative z-10"
                             whileHover={{ scale: 1.02 }}
                         >
-                            <img
-                                key={currentTrack.albumArt}
-                                src={currentTrack.albumArt}
-                                alt={currentTrack.album}
-                                className="w-full h-full object-cover"
-                            />
+                            <AnimatePresence mode="popLayout">
+                                <motion.img
+                                    key={currentTrack.albumArt}
+                                    src={currentTrack.albumArt}
+                                    alt={currentTrack.album}
+                                    className="w-full h-full object-cover absolute inset-0"
+                                    initial={{ x: "-50%", opacity: 0, scale: 0.9 }}
+                                    animate={{ x: "0%", y: "0%", opacity: 1, scale: 1, rotate: 0 }}
+                                    exit={{ x: "80%", y: "20%", opacity: 0, scale: 0.9, rotate: 5 }}
+
+                                    transition={{
+                                        type: "tween",
+                                        ease: [0.4, 0.0, 0.2, 1], // Standard fast-out-slow-in curve
+                                        duration: 0.6
+                                    }}
+                                />
+                            </AnimatePresence>
+
+                            {/* Shine Effect Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </motion.div>
                     </div>
 
-                    {}
-                    <div className="flex-1 min-w-[20rem] flex flex-col justify-center gap-6">
-                        {}
+                    { }
+                    <div className="flex-1 min-w-[20rem] flex flex-col justify-center gap-6 relative z-20">
+                        { }
                         <div className="space-y-1 text-center md:text-left">
                             <h3 className="text-white font-bold text-3xl md:text-4xl truncate leading-tight tracking-tight">{currentTrack.name}</h3>
                             <p className="text-green-400 text-lg md:text-xl font-medium truncate">{currentTrack.artist}</p>
                             <p className="text-white/40 text-sm uppercase tracking-widest font-mono">{currentTrack.album}</p>
                         </div>
 
-                        {}
+                        { }
                         {isMissingToken && (
                             <div className="flex justify-center md:justify-start py-2">
                                 <a
@@ -205,7 +232,7 @@ export default function CurrentTrackDisplay() {
                             </div>
                         )}
 
-                        {}
+                        { }
                         {!isMissingToken && (
                             <div className="w-full space-y-2">
                                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -223,7 +250,7 @@ export default function CurrentTrackDisplay() {
                             </div>
                         )}
 
-                        {}
+                        { }
                         {!isMissingToken && (
                             <div className="flex items-center justify-center md:justify-start gap-6 pt-2">
                                 <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white hover:scale-110">
@@ -241,10 +268,33 @@ export default function CurrentTrackDisplay() {
                                 <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/70 hover:text-white hover:scale-110">
                                     <SkipForward size={24} fill="currentColor" />
                                 </button>
+
+                                {/* Volume Controls Separator */}
+                                <div className="w-px h-8 bg-white/10 mx-2 hidden md:block" />
+
+                                <div className="flex gap-3">
+                                    {/* Volume Down */}
+                                    <button
+                                        onClick={() => handleVolume('vol_down')}
+                                        className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/50 hover:text-white hover:scale-110"
+                                        title="Volume Down"
+                                    >
+                                        <Volume1 size={20} />
+                                    </button>
+
+                                    {/* Volume Up */}
+                                    <button
+                                        onClick={() => handleVolume('vol_up')}
+                                        className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all text-white/50 hover:text-white hover:scale-110"
+                                        title="Volume Up"
+                                    >
+                                        <Volume2 size={20} />
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {}
+                        { }
                         <div className="text-[10px] font-mono text-white/30 text-center border-t border-white/5 pt-2 mt-2">
                             Token: {debugInfo.token} | Status: {debugInfo.status} | Last: {debugInfo.lastUpdate}
                         </div>

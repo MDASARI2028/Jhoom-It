@@ -6,7 +6,9 @@ export type GestureType =
   | "GRAB"
   | "PALM_OPEN"
   | "POINT"
-  | "VICTORY";
+  | "VICTORY"
+  | "THUMBS_UP"
+  | "THUMBS_DOWN";
 
 export interface Point {
   x: number;
@@ -76,7 +78,7 @@ export const useStore = create<StoreState>((set) => ({
   addNotification: (message, type = "info") => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
     set((state) => ({
-      notifications: [...state.notifications, { id, message, type, timestamp: Date.now() }],
+      notifications: [...state.notifications, { id, message, type, timestamp: Date.now() }].slice(-1),
     }));
     setTimeout(() => {
       useStore.getState().removeNotification(id);

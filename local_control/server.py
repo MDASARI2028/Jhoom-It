@@ -45,6 +45,6 @@ def health_check():
 if __name__ == '__main__':
     print("-------------------------------------------------------")
     print("   SPOTIFY GESTURE CONTROLLER - LOCAL BACKEND")
-    print("   Running on http://localhost:5000")
+    print("   Running on http://localhost:5001")
     print("-------------------------------------------------------")
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5001)

@@ -22,8 +22,8 @@ export default function CardVisualizer() {
                 sourceRef.current.connect(analyserRef.current);
 
 
-                analyserRef.current.fftSize = 1024;
-                analyserRef.current.smoothingTimeConstant = 0.5;
+                analyserRef.current.fftSize = 2048;
+                analyserRef.current.smoothingTimeConstant = 0.7; // Smoother "wave" look
 
                 draw();
             } catch (err) {
@@ -63,22 +63,25 @@ export default function CardVisualizer() {
             const borderRadius = 40;
 
 
-            const barCount = 300;
+            const barCount = 200;
             const totalPerimeter = (innerW + innerH) * 2;
-            const step = Math.floor(bufferLength / barCount) || 1;
+
+            // Focus on useful frequency range (Bass/Mids) for better "beat" visualization
+            const usefulBinCount = Math.floor(bufferLength * 0.5);
+            const step = usefulBinCount / barCount;
 
             ctx.lineCap = "round";
 
-
-
-
             for (let i = 0; i < barCount; i++) {
-                const value = dataArray[i * step] || 0;
+                const dataIndex = Math.floor(i * step);
+                const value = dataArray[dataIndex] || 0;
 
+                // Moderate Sensitivity
+                const sensitivity = 1.5;
+                const normalized = Math.min(1, (value / 255) * sensitivity);
 
-
-                const normalized = value / 255;
-                const barLen = Math.pow(normalized, 1.5) * 100;
+                // Exponential Curve: Makes loud beats pop, quiet noise stay low
+                const barLen = Math.pow(normalized, 2.0) * 140;
 
 
                 const t = i / barCount;
@@ -99,13 +102,13 @@ export default function CardVisualizer() {
 
                 else {
 
-                    if (pos.x > centerX && pos.y < centerY) angle = Math.atan2(pos.y - (centerY - innerH / 2 + borderRadius), pos.x - (centerX + innerW / 2 - borderRadius)); 
-                    else if (pos.x > centerX && pos.y > centerY) angle = Math.atan2(pos.y - (centerY + innerH / 2 - borderRadius), pos.x - (centerX + innerW / 2 - borderRadius)); 
-                    else if (pos.x < centerX && pos.y > centerY) angle = Math.atan2(pos.y - (centerY + innerH / 2 - borderRadius), pos.x - (centerX - innerW / 2 + borderRadius)); 
-                    else if (pos.x < centerX && pos.y < centerY) angle = Math.atan2(pos.y - (centerY - innerH / 2 + borderRadius), pos.x - (centerX - innerW / 2 + borderRadius)); 
+                    if (pos.x > centerX && pos.y < centerY) angle = Math.atan2(pos.y - (centerY - innerH / 2 + borderRadius), pos.x - (centerX + innerW / 2 - borderRadius));
+                    else if (pos.x > centerX && pos.y > centerY) angle = Math.atan2(pos.y - (centerY + innerH / 2 - borderRadius), pos.x - (centerX + innerW / 2 - borderRadius));
+                    else if (pos.x < centerX && pos.y > centerY) angle = Math.atan2(pos.y - (centerY + innerH / 2 - borderRadius), pos.x - (centerX - innerW / 2 + borderRadius));
+                    else if (pos.x < centerX && pos.y < centerY) angle = Math.atan2(pos.y - (centerY - innerH / 2 + borderRadius), pos.x - (centerX - innerW / 2 + borderRadius));
                 }
 
-                const x2 = pos.x + Math.cos(angle) * (barLen + 2); 
+                const x2 = pos.x + Math.cos(angle) * (barLen + 2);
                 const y2 = pos.y + Math.sin(angle) * (barLen + 2);
 
 
@@ -113,9 +116,9 @@ export default function CardVisualizer() {
 
 
 
-                ctx.lineWidth = 3; 
+                ctx.lineWidth = 3;
 
-                const hue = 120 + (normalized * 50); 
+                const hue = 120 + (normalized * 50);
                 const alpha = 0.3 + (normalized * 0.7);
 
                 ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
